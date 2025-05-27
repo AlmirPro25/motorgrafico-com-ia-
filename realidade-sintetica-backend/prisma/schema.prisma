@@ -1,0 +1,230 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  passwordHash  String
+  username      String?   @unique // Added from conceptual plan
+  displayName   String?   // Added from conceptual plan
+  profileImage  String?   // Added from conceptual plan
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  projects      Project[]
+}
+
+model Project {
+  id             String    @id @default(cuid())
+  userId         String
+  name           String
+  description    String?
+  thumbnailUrl   String?   // Added from conceptual plan
+  category       String?   // Added from conceptual plan (e.g. 'game', 'simulation', 'art')
+  tags           String[]  // Added from conceptual plan as array of strings
+  settings       Json?
+  isPublic       Boolean   @default(false) // Added from conceptual plan
+  version        Int       @default(1)     // Added from conceptual plan
+  lastPublishedAt DateTime? // Added from conceptual plan
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  assets         Asset[]
+  processingJobs ProcessingJob[]
+}
+
+model Asset {
+  id              String    @id @default(cuid())
+  projectId       String
+  type            String    // 'mundo', 'personagem', 'objeto', 'midia_referencia', 'render_output', 'material', 'textura', 'script'
+  name            String
+  description     String?
+  status          String    @default("draft") // 'draft', 'uploading', 'processing', 'ready', 'error', 'archived'
+  tags            String[]  // Added from conceptual plan
+  metadata        Json?     // For type-specific data not fitting other models
+  storagePath     String?   // Added from conceptual plan (path to raw file if applicable)
+  version         Int       @default(1) // Added from conceptual plan
+  license         String?   // Added from conceptual plan
+  isPublic        Boolean   @default(false) // Added from conceptual plan
+  sourceAssetId   String?   // For derived assets, added from conceptual plan
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  project         Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  mediaReferences MediaReference[]
+  processingJobs  ProcessingJob[]
+  worldScene      WorldScene?
+  characterModel  CharacterModel?
+  objectModel     ObjectModel?
+  renderOutput    RenderOutput?
+  // Relations for new types if they become their own models later:
+  // material        Material?
+  // texture         Texture?
+  // script          Script?
+  sourceAsset     Asset?    @relation("DerivedAssets", fields: [sourceAssetId], references: [id], onDelete: SetNull)
+  derivedAssets   Asset[]   @relation("DerivedAssets")
+}
+
+model MediaReference {
+  id          String   @id @default(cuid())
+  assetId     String
+  type        String   // 'image', 'video', 'audio', 'document'
+  url         String   // Could be an external URL or a path to a managed file
+  filename    String?  // Added from conceptual plan
+  mimeType    String?  // Added from conceptual plan
+  sizeBytes   Int?     // Added from conceptual plan
+  metadata    Json?    // e.g., image dimensions, video duration
+  description String?  // Added from conceptual plan
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt // Added from conceptual plan
+  asset       Asset    @relation(fields: [assetId], references: [id], onDelete: Cascade)
+}
+
+model ProcessingJob {
+  id            String   @id @default(cuid())
+  projectId     String
+  assetId       String?
+  type          String   // 'generate_3d_image', 'generate_3d_text', 'render_scene', 'process_media', 'analyze_asset', 'train_model'
+  status        String   @default("pending") // 'pending', 'queued', 'running', 'completed', 'failed', 'cancelled'
+  inputData     Json?
+  outputData    Json?    // Could store direct small outputs or references to larger ones (e.g. new Asset IDs)
+  priority      Int      @default(0) // Added from conceptual plan
+  progress      Float?   @default(0) // Added from conceptual plan (0.0 to 1.0)
+  logs          Json?    // Store array of log messages or structured logs
+  startedAt     DateTime?
+  completedAt   DateTime?
+  errorMessage  String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt // Added from conceptual plan
+  project       Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  asset         Asset?   @relation(fields: [assetId], references: [id], onDelete: SetNull)
+  renderOutputs RenderOutput[]
+}
+
+model WorldScene {
+  id                  String   @id @default(cuid())
+  assetId             String   @unique
+  sceneData           Json?    // e.g., Three.js scene JSON, list of objects and their transforms
+  environmentSettings Json?    // Lighting, skybox, physics settings
+  version             Int      @default(1) // Added from conceptual plan
+  lastBakedAt         DateTime? // Added from conceptual plan (e.g. for lightmaps)
+  interactivePoints   Json?    // Added from conceptual plan (e.g. for navigation or interaction)
+  asset               Asset    @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  createdAt           DateTime @default(now()) // Added for consistency
+  updatedAt           DateTime @updatedAt    // Added for consistency
+}
+
+model CharacterModel {
+  id              String   @id @default(cuid())
+  assetId         String   @unique
+  modelUrl        String?  // Path to GLB, FBX, etc.
+  skeletonData    Json?    // Bone structure, rigging info
+  animationData   Json?    // List of animations, blend shapes
+  customizationOptions Json? // Added from conceptual plan (e.g. color palettes, attachments)
+  voiceId         String?  // Added from conceptual plan (link to a voice asset or service)
+  asset           Asset    @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  createdAt       DateTime @default(now()) // Added for consistency
+  updatedAt       DateTime @updatedAt    // Added for consistency
+}
+
+model ObjectModel {
+  id                String   @id @default(cuid())
+  assetId           String   @unique
+  modelUrl          String?  // Path to GLB, FBX, etc.
+  physicalProperties Json?   // Added from conceptual plan (mass, friction, etc.)
+  interactionLogic  Json?    // Added from conceptual plan (e.g. script references, event triggers)
+  metadata          Json?    // General metadata
+  asset             Asset    @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  createdAt         DateTime @default(now()) // Added for consistency
+  updatedAt         DateTime @updatedAt    // Added for consistency
+}
+
+model RenderOutput {
+  id           String   @id @default(cuid())
+  assetId      String   @unique // Each RenderOutput IS an Asset
+  jobId        String?  // The ProcessingJob that created this output
+  outputUrl    String   // Path/URL to the rendered file (e.g. PNG, MP4)
+  format       String?  // 'PNG', 'JPEG', 'MP4', 'GIF'
+  resolution   String?  // '1920x1080', '1280x720'
+  sizeBytes    Int?     // Added from conceptual plan
+  durationMs   Int?     // Added for videos/animations
+  metadata     Json?    // e.g., camera settings used, render time
+  asset        Asset    @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  job          ProcessingJob? @relation(fields: [jobId], references: [id], onDelete: SetNull) // Job might be deleted, but output remains
+  createdAt    DateTime @default(now()) // Added for consistency
+  updatedAt    DateTime @updatedAt    // Added for consistency
+}
+
+// Enums could be defined here if needed, e.g. for AssetType or JobStatus,
+// but Prisma handles them as strings with application-level validation.
+// For PostgreSQL, you could use native enums if preferred, but that requires
+// more advanced Prisma schema features (e.g. `Unsupported` type or raw SQL migrations).
+// Example:
+// enum AssetType {
+//   WORLD
+//   CHARACTER
+//   OBJECT
+//   MEDIA_REFERENCE
+//   RENDER_OUTPUT
+// }
+// model Asset {
+//   ...
+//   type AssetType
+//   ...
+// }
+// This is generally more complex to manage with Prisma migrations than string types.
+// Sticking to String types for enums for now.
+// The application layer will be responsible for validating these string values.
+// For example, `Asset.type` could be validated against a list of allowed strings.
+// The `tags` fields are `String[]` which Prisma maps to `text[]` in PostgreSQL.
+// `Json` fields are mapped to `jsonb` in PostgreSQL.
+// `onDelete: Cascade` is used to ensure that related records are deleted when a parent record is deleted.
+// `onDelete: SetNull` is used for `ProcessingJob.assetId` and `RenderOutput.jobId` to keep logs/outputs even if the original asset/job is removed.
+// The self-relation on `Asset` for `sourceAssetId` and `derivedAssets` allows tracking asset lineage.
+// Timestamps `createdAt` and `updatedAt` are added to most models for auditability.
+// Optional fields are denoted by `?`.
+// Unique constraints are added where appropriate (e.g., `User.email`, `Asset.assetId` in specific models like `WorldScene`).
+// Default values are provided for fields like `status`, `isPublic`, `version`, `createdAt`, `updatedAt`.
+// Naming conventions: PascalCase for models, camelCase for fields.
+// All primary keys are `String @id @default(cuid())`.
+// Added fields from "Sugestões de Schema de Banco de Dados" like `username`, `displayName` for User, etc.
+// and ensured all relations are defined.
+// Added `createdAt` and `updatedAt` to sub-models like `WorldScene`, `CharacterModel`, `ObjectModel`, `RenderOutput` for consistency.
+// Added `updatedAt` to `MediaReference` and `ProcessingJob`.
+// Added more fields to `Asset` and `Project` based on conceptual plan: `tags`, `thumbnailUrl`, `category`, `isPublic`, `version`, `lastPublishedAt` for Project;
+// `tags`, `storagePath`, `version`, `license`, `isPublic`, `sourceAssetId` for Asset.
+// Added more fields to `MediaReference`: `filename`, `mimeType`, `sizeBytes`, `description`.
+// Added more fields to `ProcessingJob`: `priority`, `progress`, `logs`.
+// Added more fields to `WorldScene`: `version`, `lastBakedAt`, `interactivePoints`.
+// Added more fields to `CharacterModel`: `customizationOptions`, `voiceId`.
+// Added more fields to `ObjectModel`: `physicalProperties`, `interactionLogic`.
+// Added more fields to `RenderOutput`: `sizeBytes`, `durationMs`.
+// Corrected relation for RenderOutput to Asset (it *is* an Asset, so it's one-to-one to Asset, not the other way around as implied by the example snippet).
+// The `assetId` in `WorldScene`, `CharacterModel`, `ObjectModel`, `RenderOutput` makes them unique and creates the one-to-one link to an `Asset` record.
+// The `Asset` model's `type` field will differentiate what kind of asset it is, and the corresponding specific model (WorldScene, CharacterModel, etc.) will hold the detailed data.
+// This structure means when you create a `WorldScene`, you first create an `Asset` with type 'mundo', then create a `WorldScene` record linked to that asset's ID.
+// This approach is reflected by making `assetId` in `WorldScene`, `CharacterModel`, `ObjectModel`, `RenderOutput` unique.
+// The `RenderOutput` itself is an `Asset`, so `assetId` in `RenderOutput` should point to its own ID in the `Asset` table. This seems circular.
+// Let's reconsider: `RenderOutput` is a *type* of `Asset`. So an `Asset` can *be* a `RenderOutput`.
+// The example schema had `assetId String @unique` in `RenderOutput` and `renderOutput RenderOutput?` in `Asset`. This is correct for a one-to-one.
+// My interpretation was that an `Asset` of type `render_output` would have its details in `RenderOutput`.
+// So `Asset.id` would be the `RenderOutput.assetId`. This is what `@relation(fields: [assetId], references: [id])` implies.
+// The `RenderOutput.id` is its own primary key. The `assetId` field in `RenderOutput` is the foreign key linking to the `Asset` table.
+// This means an `Asset` record of type `render_output` points to a `RenderOutput` record via the `Asset.renderOutput` relation field.
+// The `RenderOutput` record in turn points back to the `Asset` record via its `assetId` field.
+// This is a standard way to model one-to-one relationships where the detailed table holds the FK.
+// So the schema in the prompt for `Asset` and `RenderOutput` was correct. I've maintained that.
+// The `sourceAssetId` and `derivedAssets` in `Asset` model create a self-referencing relationship to track asset provenance.
+// `String[]` for tags will be mapped to `text[]` in PostgreSQL.
+// `Json?` for flexible JSON data.
+// `onDelete: Cascade` for strong ownership, `SetNull` for weaker links where logs/outputs might need to persist.
+// Added comments for clarity.Okay, the `prisma/schema.prisma` file has been successfully overwritten with the detailed schema.
+This schema includes all the models (`User`, `Project`, `Asset`, `MediaReference`, `ProcessingJob`, `WorldScene`, `CharacterModel`, `ObjectModel`, `RenderOutput`) with their respective fields, types, relations, and default values as derived from the conceptual plan and the provided example. I've ensured that IDs are CUIDs, timestamps are handled, and relations use appropriate `onDelete` strategies. I also added some fields that were in the "Sugestões de Schema de Banco de Dados" of the original issue to make it more complete.
+
+The next step in a typical Prisma workflow would be to run `prisma migrate dev` to create and apply migrations, and then `prisma generate` to update the Prisma Client. However, the subtask only asks to *populate* `schema.prisma`.
+
+I can verify the file was written by reading its content or by listing the directory. Listing is simpler.
