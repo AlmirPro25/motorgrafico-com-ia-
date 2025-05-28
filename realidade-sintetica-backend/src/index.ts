@@ -1,5 +1,6 @@
 import express, { Express, Request, Response, NextFunction } from 'express';
 import dotenv from 'dotenv';
+import cors from 'cors'; // Import cors package
 // Import Prisma client instance (to be created in src/config or src/core/database.ts, for now, this is a placeholder)
 // import prismaClient from './config/database'; 
 
@@ -19,16 +20,8 @@ const PORT = process.env.PORT || 3001; // Default to 3001 if PORT not in .env
 app.use(express.json()); // For parsing application/json
 app.use(express.urlencoded({ extended: true })); // For parsing application/x-www-form-urlencoded
 
-// CORS Middleware (basic example, can be more specific with 'cors' package)
-app.use((req: Request, res: Response, next: NextFunction) => {
-  res.setHeader('Access-Control-Allow-Origin', '*'); // Allow all origins (adjust for production)
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-  if (req.method === 'OPTIONS') {
-    return res.sendStatus(200);
-  }
-  next();
-});
+// Use CORS package
+app.use(cors()); // Basic CORS setup, allows all origins by default
 
 // API Routes
 app.get('/api/v1/health', (req: Request, res: Response) => {
