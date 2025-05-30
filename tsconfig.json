@@ -1,40 +1,24 @@
 {
   "compilerOptions": {
-    "target": "ES2020",
-    "useDefineForClassFields": true,
-    "lib": ["ES2020", "DOM", "DOM.Iterable"],
-    "module": "ESNext",
-    "skipLibCheck": true,
-
-    /* Bundler mode */
-    "moduleResolution": "bundler",
-    "allowImportingTsExtensions": true,
-    "resolveJsonModule": true,
-    "isolatedModules": true,
-    "noEmit": true,
-    "jsx": "react-jsx",
-
-    /* Linting */
+    "target": "es2017", // Or a later version like ES2020, ESNext
+    "module": "commonjs",
+    "lib": ["es6", "dom"], // Add "dom" if you have any browser-specific types, otherwise remove
     "strict": true,
-    "noUnusedLocals": true,
-    "noUnusedParameters": true,
-    "noFallthroughCasesInSwitch": true,
-
-    /* Path Aliases (optional, but good for larger projects) */
-    "baseUrl": "./src",
-    "paths": {
-      "@components/*": ["components/*"],
-      "@pages/*": ["pages/*"],
-      "@hooks/*": ["hooks/*"],
-      "@contexts/*": ["contexts/*"],
-      "@services/*": ["services/*"],
-      "@utils/*": ["utils/*"],
-      "@config/*": ["config/*"],
-      "@assets/*": ["assets/*"],
-      "@routes/*": ["routes/*"],
-      "@types/*": ["types/*"]
-    }
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "resolveJsonModule": true, // If you plan to import JSON files
+    // "baseUrl": "./src", // Optional: if you want to use absolute paths for imports
+    // "paths": { // Optional: path mapping
+    //   "@/*": ["*"]
+    // },
+    "moduleResolution": "node", // Ensures Node.js-style module resolution
+    "sourceMap": true, // Generates source maps for easier debugging
+    "experimentalDecorators": true, // If you plan to use decorators (common in some frameworks)
+    "emitDecoratorMetadata": true // If you plan to use decorators with metadata (e.g., with TypeORM or similar)
   },
-  "include": ["src"],
-  "references": [{ "path": "./tsconfig.node.json" }]
+  "include": ["src/**/*"], // Specifies which files to include in compilation
+  "exclude": ["node_modules", "**/*.spec.ts", "**/*.test.ts", "dist"] // Specifies which files to exclude
 }
