@@ -26,7 +26,7 @@ export const createNewPost = async (data: CreatePostDTO): Promise<Post> => {
   if (!data.content_text && !data.content_image_url && !data.content_video_url) {
     throw new Error('Post content (text, image, or video) is required.');
   }
-  
+
   // Validate privacy level
   const validPrivacyLevels: PostPrivacy[] = ['public', 'friends', 'private'];
   if (!validPrivacyLevels.includes(data.privacy_level)) {
@@ -85,7 +85,7 @@ export const getPostsByUser = async (
   const { page = DEFAULT_PAGE, limit = DEFAULT_LIMIT } = options;
   // currentUserId is passed to PostDB.findPostsByUserId for its own privacy/like status logic
   const posts = await PostDB.findPostsByUserId(targetUserId, { page, limit }, currentUserId);
-  
+
   // Additional filtering for 'friends' privacy if not handled by DB layer fully
   // The DB layer currently shows 'public' or 'all if own profile'.
   // This service layer can refine 'friends' posts if currentUserId is provided and is a friend.
@@ -141,7 +141,7 @@ export const updateExistingPost = async (
   if (updateData.privacy_level && !['public', 'friends', 'private'].includes(updateData.privacy_level)) {
       throw new Error('Invalid privacy level specified.');
   }
-  
+
   const updatedPost = await PostDB.updatePostInDB(postId, userId, updateData);
   if (!updatedPost) return null; // Should not happen if checks above pass
 
@@ -215,7 +215,7 @@ export const shareExistingPost = async (data: SharePostDTO): Promise<Post | null
   if (originalPost.original_post_id) {
       throw new Error('Cannot re-share a post that is already a share.');
   }
-  
+
   // Validate privacy level for the new shared post
   if (!['public', 'friends', 'private'].includes(privacy_level)) {
       throw new Error('Invalid privacy level specified for the shared post.');

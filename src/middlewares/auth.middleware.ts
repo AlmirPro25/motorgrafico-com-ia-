@@ -39,7 +39,7 @@ export const protect = (req: AuthenticatedRequest, res: Response, next: NextFunc
   try {
     // Verify token
     const decoded = jwt.verify(token, JWT_SECRET!) as { userId: string; email: string; handle: string; iat: number; exp: number };
-    
+
     // Attach user to request object.
     // You might want to fetch fresh user data from DB here to ensure user still exists / is active
     // For now, we'll just use the payload from the token.

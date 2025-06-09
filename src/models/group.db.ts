@@ -80,7 +80,7 @@ export const createGroup = async (data: CreateGroupDTO): Promise<Group> => {
     const newGroupId = rows[0].id;
     // Creator becomes first admin member
     await createGroupMember(newGroupId, creator_id, 'admin');
-    
+
     const newGroup = await findGroupById(newGroupId, creator_id); // Pass creator_id for context
     if (!newGroup) throw new Error('Failed to create or find group after insertion.');
     return newGroup;
@@ -181,7 +181,7 @@ export const updateGroupInDB = async (groupId: string, adminUserId: string, data
     const sql = `
         UPDATE "Groups"
         SET ${setClauses}, updated_at = CURRENT_TIMESTAMP
-        WHERE id = $${fields.length + 1} 
+        WHERE id = $${fields.length + 1}
         -- AND creator_id = $${fields.length + 2} -- Or check admin role in service layer
         RETURNING id;
     `;

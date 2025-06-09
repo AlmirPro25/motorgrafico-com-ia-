@@ -63,7 +63,7 @@ export const getAllEvents = async (
 ): Promise<Event[]> => { // Consider PaginatedEvents
   // Apply default filters if not provided
   filters.type = filters.type || 'upcoming';
-  
+
   // Default privacy filter for anonymous users: only public events
   if (!currentUserId && (!filters.privacy || filters.privacy.includes('public'))) {
       filters.privacy = ['public'];
@@ -123,7 +123,7 @@ export const rsvpToEvent = async (rsvpData: RsvpDTO): Promise<EventParticipant> 
 
   const event = await getEventById(eventId, userId); // Use service to check privacy
   if (!event) throw new Error('Event not found or not accessible to this user.');
-  
+
   if (!['going', 'interested', 'not_going'].includes(status)) {
       throw new Error('Invalid RSVP status.');
   }
@@ -142,7 +142,7 @@ export const getEventParticipants = async (
 ): Promise<EventParticipant[]> => { // Consider PaginatedEventParticipants
   const event = await getEventById(eventId, currentUserId); // Check if current user can even see the event
   if (!event) throw new Error('Event not found or not accessible.');
-  
+
   // Further privacy: Who can see participant list?
   // For now, if you can see the event, you can see participants.
   return EventDB.findParticipantsByEventId(eventId, pagination, rsvpFilter);
@@ -176,7 +176,7 @@ export const getCommentsForEvent = async (
 ): Promise<EventComment[]> => { // Consider PaginatedEventComments
   const event = await getEventById(eventId, currentUserId); // Check if current user can see the event
   if (!event) throw new Error('Event not found or not accessible.');
-  
+
   return EventDB.findCommentsByEventId(eventId, pagination);
 };
 

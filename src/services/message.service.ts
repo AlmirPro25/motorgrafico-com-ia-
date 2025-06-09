@@ -2,6 +2,7 @@ import * as MessageDB from '../models/message.db';
 import * as ConversationDB from '../models/conversation.db';
 import * as UserDB from '../models/user.db'; // For sender validation
 import * as ConversationService from './conversation.service'; // To check participation
+import { webSocketEmitterService } from './webSocketEmitter.service'; // Import emitter
 import { Message, SendMessageDTO, MessagePaginationOptions } from '../models/message.types';
 // import { PaginatedMessages } from '../models/message.types'; // If returning this structure
 
@@ -11,7 +12,8 @@ const DEFAULT_LIMIT = 30;
 export const sendNewMessage = async (
   conversationId: string,
   senderId: string,
-  content: Partial<Pick<SendMessageDTO, 'content_text' | 'content_image_url' | 'content_video_url'>>
+  content: Partial<Pick<SendMessageDTO, 'content_text' | 'content_image_url' | 'content_video_url'>>,
+  senderSocketId?: string // Optional: To exclude sender from broadcast if handled by emitter
 ): Promise<Message> => {
   // 1. Validate sender exists
   const sender = await UserDB.findUserById(senderId);
@@ -44,6 +46,24 @@ export const sendNewMessage = async (
     // Also, mark the conversation as read for the sender up to this new message.
     await ConversationDB.updateParticipantLastReadAt(conversationId, senderId);
 
+    // 6. Emit the new message to other participants in the conversation room via WebSocket
+    // The `newMessage` object from `MessageDB.createMessage` should include sender details due to `findMessageById`
+    // If not, ensure sender details (PublicUserProfile) are attached before emitting.
+    // `newMessage.sender` should be populated by `findMessageById` called in `MessageDB.createMessage`.
+    if (!newMessage.sender) {
+        // This should not happen if findMessageById works correctly
+        console.error("CRITICAL: newMessage.sender is not populated after creation. Emitting without full sender profile.");
+        // Potentially fetch sender profile here if necessary, but ideally it's part of `newMessage`
+    }
+
+    webSocketEmitterService.emitToConversation(
+        conversationId,
+        'new_message',
+        newMessage, // Send the full message object, assuming it includes sender profile
+        senderSocketId // Pass sender's socket ID to allow emitter to exclude them
+    );
+    console.log(`Message ${newMessage.id} emitted to conversation room ${conversationId}`);
+
   } else {
     // This case should ideally not be reached if createMessage throws on failure
     throw new Error('Failed to send message.');
@@ -67,7 +87,7 @@ export const getMessagesForConversation = async (
 
   // 2. Fetch messages
   const messages = await MessageDB.findMessagesByConversationId(conversationId, { page, limit, before_message_id });
-  
+
   // 3. Optionally, after fetching messages, mark the conversation as read for this user
   // This is often done when a user opens a chat.
   // await markConversationAsRead(conversationId, userId); // Or client triggers this explicitly

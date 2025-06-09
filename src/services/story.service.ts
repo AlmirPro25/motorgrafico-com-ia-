@@ -20,11 +20,11 @@ export const createNewStory = async (data: CreateStoryDTO): Promise<Story> => {
 
   // 3. Create story (expires_at is handled by DB)
   const story = await StoryDB.createStory(data);
-  
+
   // 4. Mark as viewed by the author automatically (optional product decision)
   // Some platforms do this, some don't. For now, let's not mark it viewed by author.
   // If needed: await StoryDB.createStoryView(story.id, data.user_id);
-  
+
   return story;
 };
 
@@ -33,7 +33,7 @@ export const getStoryById = async (storyId: string, currentUserId?: string): Pro
   // It also joins author and can check view status if currentUserId is provided.
   const story = await StoryDB.findStoryById(storyId, currentUserId);
   if (!story) return null;
-  
+
   // No additional privacy here beyond existence and expiration, unless stories adopt post-like privacy.
   return story;
 };
@@ -55,7 +55,7 @@ export const getStoriesForFeed = async (currentUserId: string, options?: StoryFe
   // It also handles 'is_viewed_by_user' for the currentUserId.
   // Future: This service will apply actual friend/follower logic to select users for the feed.
   const stories = await StoryDB.getFeedStories(currentUserId, options);
-  
+
   // Group stories by user for the feed response structure (optional, can be done in controller or frontend)
   // For now, returning flat list as per DB function.
   // If PaginatedStories.stories_by_user structure is desired:
@@ -102,7 +102,7 @@ export const markStoryAsViewed = async (storyId: string, userId: string): Promis
   if (!story) {
     throw new Error('Story not found or has expired.');
   }
-  
+
   // 3. Prevent user from viewing their own story (optional product decision)
   // if (story.user_id === userId) {
   //   // Some platforms allow viewing own story without it counting, some track it.

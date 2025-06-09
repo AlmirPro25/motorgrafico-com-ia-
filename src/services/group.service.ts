@@ -114,7 +114,7 @@ export const addGroupMemberByAdmin = async (groupId: string, adminUserId: string
 
     const existingMembership = await GroupDB.findGroupMember(groupId, newMemberUserId);
     if (existingMembership) throw new Error('User is already a member of this group.');
-    
+
     if (!['admin', 'moderator', 'member'].includes(role)) throw new Error('Invalid role specified.');
 
 

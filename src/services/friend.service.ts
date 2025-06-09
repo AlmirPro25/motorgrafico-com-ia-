@@ -1,14 +1,15 @@
 import * as FriendDB from '../models/friend.db';
 import * as UserDB from '../models/user.db';
-import * as UserSettingsDB from '../models/user.settings.db'; // Assuming this exists for UserSettings
+import * as UserSettingsDB from '../models/user.settings.db';
+import * as NotificationService from './notification.service'; // Import NotificationService
 import {
   FriendRequest,
   FriendRequestStatus,
   FriendListPaginationOptions,
   // PaginatedFriendRequests, PaginatedFriendList // If returning these structures
 } from '../models/friend.types';
-import { UserSettings } from '../models/user.types'; // Assuming UserSettings is here
-import { PublicUserProfile } from '../models/user.types';
+import { UserSettings, PublicUserProfile } from '../models/user.types'; // Assuming UserSettings is here
+import { CreateNotificationDTO } from '../models/notification.types'; // For DTO
 
 const DEFAULT_PAGE = 1;
 const DEFAULT_LIMIT = 15;
@@ -36,7 +37,7 @@ export const sendFriendRequest = async (requesterId: string, receiverId: string)
     }
     // If declined/unfriended, allow sending a new one (or handle as per product decision)
   }
-  
+
   // Check receiver's privacy settings for friend requests
   // Assuming UserSettingsDB.findUserSettingsByUserId exists from Phase 1 or similar
   const receiverSettings = await UserSettingsDB.findUserSettingsByUserId(receiverId);
@@ -53,7 +54,23 @@ export const sendFriendRequest = async (requesterId: string, receiverId: string)
   }
 
 
-  return FriendDB.createFriendRequest(requesterId, receiverId);
+  const newRequest = await FriendDB.createFriendRequest(requesterId, receiverId);
+
+  // Send notification to the receiver
+  if (newRequest && requester) { // requester profile should be available
+      const notificationDTO: CreateNotificationDTO = {
+          recipient_user_id: receiverId,
+          actor_user_id: requesterId,
+          type: 'new_friend_request',
+          target_entity_type: 'user', // Target is the requester themself
+          target_entity_id: requesterId, // Or newRequest.id to link to the request itself
+          message: `${requester.first_name || requester.handle} sent you a friend request.`,
+      };
+      NotificationService.createNotificationAndEmit(notificationDTO)
+          .catch(err => console.error("Failed to send 'new_friend_request' notification:", err));
+  }
+
+  return newRequest;
 };
 
 export const getIncomingRequests = async (
@@ -85,7 +102,24 @@ export const acceptFriendRequest = async (requestId: string, currentUserId: stri
   }
 
   const updatedRequest = await FriendDB.updateFriendRequestStatus(requestId, 'accepted');
-  if (!updatedRequest) throw new Error('Failed to update friend request.'); // Should not happen
+  if (!updatedRequest) throw new Error('Failed to update friend request.');
+
+  // Send notification to the original requester that their request was accepted
+  if (updatedRequest.status === 'accepted') {
+      const receiverProfile = await UserDB.findUserById(currentUserId); // User who accepted
+      if (receiverProfile) {
+          const notificationDTO: CreateNotificationDTO = {
+              recipient_user_id: updatedRequest.requester_id, // Notify the original requester
+              actor_user_id: currentUserId, // The user who accepted is the actor
+              type: 'friend_request_accepted',
+              target_entity_type: 'user',
+              target_entity_id: currentUserId, // Link to the profile of the user who accepted
+              message: `${receiverProfile.first_name || receiverProfile.handle} accepted your friend request.`,
+          };
+          NotificationService.createNotificationAndEmit(notificationDTO)
+              .catch(err => console.error("Failed to send 'friend_request_accepted' notification:", err));
+      }
+  }
   return updatedRequest;
 };
 
@@ -117,7 +151,7 @@ export const declineOrCancelFriendRequest = async (
   if (request.status !== 'pending') {
     throw new Error(`Cannot modify a request that is already '${request.status}'.`);
   }
-  
+
   const updatedRequest = await FriendDB.updateFriendRequestStatus(requestId, newStatus);
   if (!updatedRequest) throw new Error('Failed to update friend request.');
   return updatedRequest;

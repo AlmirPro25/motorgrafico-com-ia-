@@ -17,7 +17,7 @@ export const createEventHandler = async (req: AuthenticatedRequest, res: Respons
     try {
         if (!req.user?.userId) return res.status(401).json({ error: 'User not authenticated.' });
         const dto: CreateEventDTO = { ...req.body, creator_id: req.user.userId };
-        
+
         // Basic validation (more in service)
         if (!dto.title || !dto.start_time || !dto.privacy) {
             return res.status(400).json({ error: 'Title, start_time, and privacy are required.' });

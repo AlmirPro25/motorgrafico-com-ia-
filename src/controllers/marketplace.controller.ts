@@ -17,7 +17,7 @@ export const listItemHandler = async (req: AuthenticatedRequest, res: Response, 
     try {
         if (!req.user?.userId) return res.status(401).json({ error: 'User not authenticated.' });
         const dto: CreateItemDTO = { ...req.body, seller_id: req.user.userId };
-        
+
         // Basic validation (more in service)
         if (!dto.title || !dto.category_id || dto.price === undefined || !dto.currency || !dto.condition) {
             return res.status(400).json({ error: 'Title, category_id, price, currency, and condition are required.' });
@@ -68,7 +68,7 @@ export const updateItemHandler = async (req: AuthenticatedRequest, res: Response
         if (!req.user?.userId) return res.status(401).json({ error: 'User not authenticated.' });
         const dto: UpdateItemDTO = req.body;
         if (Object.keys(dto).length === 0) return res.status(400).json({ error: 'No update data provided.'});
-        
+
         const item = await MarketplaceService.updateListedItem(req.params.itemId, req.user.userId, dto);
         res.status(200).json(item);
     } catch (error) {
@@ -101,7 +101,7 @@ export const listCategoriesHandler = async (req: Request, res: Response, next: N
     try {
         // parent_category_id=null for top-level, or specific ID for sub-categories
         // If query param is absent, service fetches all. If present but empty string, also all.
-        const parentCategoryId = req.query.parent_category_id as string | undefined | null; 
+        const parentCategoryId = req.query.parent_category_id as string | undefined | null;
         const categories = await MarketplaceService.getAllCategories(parentCategoryId);
         res.status(200).json(categories);
     } catch (error) {
@@ -116,7 +116,7 @@ const isAdmin = (req: AuthenticatedRequest): boolean => {
     // For now, let's assume if a user is authenticated, they can manage categories for testing.
     // In a real app, this would be a critical security check.
     console.warn("WARN: Admin check for category management is a placeholder!");
-    return !!req.user; 
+    return !!req.user;
 };
 
 export const createCategoryHandler = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {

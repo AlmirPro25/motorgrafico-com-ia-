@@ -164,7 +164,7 @@ export const findAllEvents = async (
     )`);
     queryParams.push(filters.attending_user_id);
   }
-  
+
   const whereString = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
   const currentUserIdParamForSelect = currentUserId ? `$${paramIndex++}` : "NULL";
   if (currentUserId) queryParams.push(currentUserId);
@@ -404,7 +404,7 @@ export const deleteEventCommentFromDB = async (commentId: string, userId: string
     sql = `DELETE FROM "EventComments" WHERE id = $1 AND user_id = $2 RETURNING event_id;`;
     params.push(userId);
   }
-  
+
   try {
     const result = await query(sql, params);
     return result.rowCount !== null && result.rowCount > 0;

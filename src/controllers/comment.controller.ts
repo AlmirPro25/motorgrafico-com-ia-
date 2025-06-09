@@ -108,12 +108,12 @@ export const deleteCommentHandler = async (req: AuthenticatedRequest, res: Respo
             return res.status(401).json({ error: 'User not authenticated.' });
         }
         const { commentId } = req.params;
-        
+
         // The CommentService.deleteExistingComment has a known limitation with its current DB interaction model
         // for post owner deletion. This controller will reflect that for now.
         // See comment.service.ts for details.
         const success = await CommentService.deleteExistingComment(commentId, req.user.userId);
-        
+
         if (!success) {
              // This path might be hit if the DB function strictly requires comment author
              // and a post owner (not comment author) tried to delete.

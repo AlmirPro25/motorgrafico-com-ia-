@@ -18,7 +18,7 @@ export const getUserSettings = async (userId: string): Promise<UserSettings | nu
   }
 
   let settings = await UserSettingsDB.findUserSettingsByUserId(userId);
-  
+
   // This case should ideally not be hit if createDefaultUserSettings is called on user registration.
   // However, as a fallback or for users created before settings defaults were comprehensive:
   if (!settings) {

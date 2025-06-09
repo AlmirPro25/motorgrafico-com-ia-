@@ -9,6 +9,8 @@ export interface User {
   profile_picture_url?: string;
   created_at: Date;
   updated_at: Date;
+  is_online?: boolean;
+  last_seen_at?: Date;
 }
 
 export type UserTheme = 'light' | 'dark' | 'system';
@@ -18,7 +20,7 @@ export interface UserSettings {
   user_id: string; // Foreign key to Users table
   is_private: boolean; // General profile privacy (deprecated or used alongside specific privacies)
   notifications_on: boolean; // General toggle for all push/email notifications (deprecated or used as master switch)
-  
+
   // New specific privacy settings
   privacy_future_posts: PostPrivacySetting; // Default privacy for new posts by this user
   privacy_friend_requests: 'everyone' | 'friends_of_friends' | 'nobody';
@@ -58,7 +60,12 @@ export type UserSettingsUpdateDTO = Partial<Pick<UserSettings, 'is_private' | 'n
 // Data returned after login or for /me endpoint (excluding password)
 export type AuthenticatedUser = Omit<User, 'password_hash'> & {
   settings?: UserSettings; // Optional: include settings for /me endpoint
+  is_online?: boolean; // Propagate presence status
+  last_seen_at?: Date; // Propagate presence status
 };
 
 // Public user profile
-export type PublicUserProfile = Omit<User, 'password_hash' | 'email' | 'updated_at'>;
+export type PublicUserProfile = Omit<User, 'password_hash' | 'email' | 'updated_at'> & {
+  is_online?: boolean; // Propagate presence status
+  last_seen_at?: Date; // Propagate presence status
+};

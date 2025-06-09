@@ -1,6 +1,7 @@
 import * as CommentDB from '../models/comment.db';
 import * as PostDB from '../models/post.db'; // To check post existence and ownership
 import * as UserDB from '../models/user.db'; // To check user existence
+import * as NotificationService from './notification.service'; // Import NotificationService
 import {
   Comment,
   CreateCommentDTO,
@@ -8,6 +9,7 @@ import {
   PaginationOptions,
   // PaginatedComments, // If you plan to return this structure
 } from '../models/comment.types';
+import { CreateNotificationDTO } from '../models/notification.types'; // For DTO
 
 const DEFAULT_PAGE = 1;
 const DEFAULT_LIMIT = 10;
@@ -47,7 +49,27 @@ export const createNewComment = async (data: CreateCommentDTO): Promise<Comment>
     }
   }
 
-  return CommentDB.createComment(data);
+  const newComment = await CommentDB.createComment(data);
+
+  // Send notification to post owner if someone else commented on their post
+  if (postExists && postExists.user_id !== data.user_id) {
+      const commenterProfile = userExists; // Already fetched
+      if (commenterProfile) {
+          const notificationDTO: CreateNotificationDTO = {
+              recipient_user_id: postExists.user_id,
+              actor_user_id: data.user_id,
+              type: 'new_comment_on_post',
+              target_entity_type: 'post', // Could also be 'comment' if linking directly to the comment
+              target_entity_id: data.post_id, // Or newComment.id if target is the comment itself
+              message: `${commenterProfile.first_name || commenterProfile.handle} commented on your post.`,
+          };
+          NotificationService.createNotificationAndEmit(notificationDTO)
+              .catch(err => console.error("Failed to send 'new_comment_on_post' notification:", err));
+      }
+  }
+  // TODO: Notify users mentioned in the comment text (future enhancement)
+
+  return newComment;
 };
 
 export const getCommentById = async (commentId: string): Promise<Comment | null> => {

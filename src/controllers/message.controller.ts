@@ -28,7 +28,7 @@ export const sendMessageHandler = async (req: AuthenticatedRequest, res: Respons
 
         const messageContent = { content_text, content_image_url, content_video_url };
         const message = await MessageService.sendNewMessage(conversationId, req.user.userId, messageContent);
-        
+
         res.status(201).json(message);
     } catch (error) {
         if (error instanceof Error) {

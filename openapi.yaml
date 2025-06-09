@@ -1,0 +1,777 @@
+openapi: 3.0.0
+info:
+  title: SocialConnect API
+  version: v1.0.0
+  description: API para a plataforma SocialConnect.
+servers:
+  - url: http://localhost:3000/api # Assuming /api is the base path for all these routes
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+          nullable: true
+      required:
+        - error
+
+    UserPublicProfile:
+      type: object
+      properties:
+        id: # Corrected from userId to id to match common practice for resource IDs
+          type: string
+          format: uuid
+          description: ID único do usuário.
+        # name: { type: string } # name is usually split into first_name, last_name
+        first_name:
+          type: string
+          nullable: true
+          description: Primeiro nome do usuário.
+        last_name:
+          type: string
+          nullable: true
+          description: Sobrenome do usuário.
+        handle:
+          type: string
+          description: Handle (nome de usuário) único.
+        profile_picture_url: # Corrected from avatarUrl
+          type: string
+          format: url
+          nullable: true
+          description: URL da imagem de perfil.
+        cover_photo_url: # Corrected from coverUrl
+          type: string
+          format: url
+          nullable: true
+          description: URL da imagem de capa do perfil.
+        bio:
+          type: string
+          nullable: true
+          description: Biografia do usuário.
+        # interests: { type: array, items: { type: string }, nullable: true } # Assuming interests not directly on User table
+        created_at:
+          type: string
+          format: date-time
+          description: Data de criação do perfil.
+        is_online:
+          type: boolean
+          description: Status de presença online.
+        last_seen_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: Data da última vez que o usuário foi visto online.
+      required:
+        - id
+        - handle
+        - created_at
+
+    UserSettings:
+      type: object
+      properties:
+        # Assuming these are the fields that can be GET/SET by user
+        privacy_future_posts:
+          type: string
+          enum: ['public', 'friends', 'private']
+          description: Configuração de privacidade padrão para novos posts.
+        privacy_friend_requests:
+          type: string
+          enum: ['everyone', 'friends_of_friends', 'nobody'] # Corrected based on previous implementation
+          description: Quem pode enviar pedidos de amizade.
+        privacy_show_friend_list:
+            type: string
+            enum: ['everyone', 'friends', 'private']
+            description: Quem pode ver a lista de amigos do usuário.
+        notifications_push_enabled:
+          type: boolean
+          description: Habilita/desabilita notificações push.
+        theme:
+          type: string
+          enum: ['light', 'dark', 'system']
+          description: Tema preferido da interface.
+        language:
+          type: string
+          example: 'en-US'
+          description: Código de idioma preferido (ex: en-US, pt-BR).
+      required:
+        - privacy_future_posts
+        - privacy_friend_requests
+        - privacy_show_friend_list
+        - notifications_push_enabled
+        - theme
+        - language
+
+    AuthenticatedUser:
+      allOf:
+        - $ref: '#/components/schemas/UserPublicProfile'
+        - type: object
+          properties:
+            email:
+              type: string
+              format: email
+            settings: # This would be from UserSettings table, not directly on User
+              $ref: '#/components/schemas/UserSettings'
+          required:
+            - email
+            # settings might not always be present directly, depends on how /me fetches it
+
+    AuthResponse:
+      type: object
+      properties:
+        user:
+          $ref: '#/components/schemas/AuthenticatedUser'
+        token:
+          type: string
+      required:
+        - user
+        - token
+
+    Post:
+      type: object
+      properties:
+        id: # Renamed from postId for consistency
+          type: string
+          format: uuid
+        user_id: # Renamed from userId for consistency with DB
+          type: string
+          format: uuid
+        author:
+          $ref: '#/components/schemas/UserPublicProfile'
+        content_text: # Renamed from textContent
+          type: string
+          nullable: true
+        content_image_url: # Renamed from imageUrl
+          type: string
+          format: url
+          nullable: true
+        content_video_url: # Renamed from videoUrl
+          type: string
+          format: url
+          nullable: true
+        privacy_level: # Renamed from privacy
+          type: string
+          enum: ['public', 'friends', 'private', 'group_members_only'] # 'group' could be 'group_members_only'
+          description: Nível de privacidade do post.
+        # locationText not directly in Posts table as per previous schemas
+        group_id:
+          type: string
+          format: uuid
+          nullable: true
+          description: ID do grupo se for um post de grupo.
+        created_at:
+          type: string
+          format: date-time
+        like_count: # Renamed from likeCount
+          type: integer
+          format: int32
+          default: 0
+        comment_count: # Renamed from commentCount
+          type: integer
+          format: int32
+          default: 0
+        is_liked_by_user: # Renamed from isLikedByMe
+          type: boolean
+          nullable: true # Only present if user context is available
+          description: Indica se o usuário autenticado curtiu este post.
+      required:
+        - id
+        - user_id
+        - author
+        - privacy_level
+        - created_at
+        - like_count
+        - comment_count
+
+    Comment:
+      type: object
+      properties:
+        id: # Renamed from commentId
+          type: string
+          format: uuid
+        post_id: # Renamed from postId
+          type: string
+          format: uuid
+        user_id: # Renamed from userId
+          type: string
+          format: uuid
+        author:
+          $ref: '#/components/schemas/UserPublicProfile'
+        content_text: # Renamed from textContent
+          type: string
+        created_at:
+          type: string
+          format: date-time
+      required:
+        - id
+        - post_id
+        - user_id
+        - author
+        - content_text
+        - created_at
+
+    # Schemas for Request Bodies (examples)
+    RegisterUserRequest:
+      type: object
+      properties:
+        # name: { type: string } # Assuming first_name and last_name
+        first_name:
+          type: string
+          nullable: true
+        last_name:
+          type: string
+          nullable: true
+        handle:
+          type: string
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          format: password
+      required:
+        - handle
+        - email
+        - password
+
+    LoginUserRequest:
+      type: object
+      properties:
+        emailOrHandle:
+          type: string
+        password:
+          type: string
+          format: password
+      required:
+        - emailOrHandle
+        - password
+
+    UpdateUserProfileRequest:
+      type: object
+      properties:
+        first_name:
+          type: string
+          nullable: true
+        last_name:
+          type: string
+          nullable: true
+        bio:
+          type: string
+          nullable: true
+        profile_picture_url:
+          type: string
+          format: url
+          nullable: true
+        cover_photo_url:
+          type: string
+          format: url
+          nullable: true
+        # interests: { type: array, items: { type: string }, nullable: true } # Removed as not on User table
+
+    CreatePostRequest:
+      type: object
+      properties:
+        content_text:
+          type: string
+          nullable: true
+        content_image_url: # Renamed
+          type: string
+          format: url
+          nullable: true
+        content_video_url: # Renamed
+          type: string
+          format: url
+          nullable: true
+        privacy_level: # Renamed
+          type: string
+          enum: ['public', 'friends', 'private'] # Group posts might be handled differently
+          default: 'public'
+        # locationText not a direct field, perhaps parsed by backend
+        group_id:
+          type: string
+          format: uuid
+          nullable: true
+      # At least one content field should be present, this can be described in description.
+
+    CreateCommentRequest:
+      type: object
+      properties:
+        content_text: # Renamed
+          type: string
+      required:
+        - content_text
+
+    LikeResponse:
+      type: object
+      properties:
+        like_count:
+          type: integer
+        is_liked_by_user:
+          type: boolean
+      required:
+        - like_count
+        - is_liked_by_user
+
+security:
+  - bearerAuth: [] # Applies Bearer token security globally to all paths that don't override it.
+                  # Specific paths can override with `security: []` for public access.
+
+paths:
+  /auth/register:
+    post:
+      tags:
+        - Auth
+      summary: Registra um novo usuário.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterUserRequest'
+      responses:
+        '201':
+          description: Usuário registrado com sucesso.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '400':
+          description: Dados de entrada inválidos (ex: email já existe, senha fraca).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Conflito, usuário com este email ou handle já existe.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /auth/login:
+    post:
+      tags:
+        - Auth
+      summary: Autentica um usuário existente.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginUserRequest'
+      responses:
+        '200':
+          description: Login bem-sucedido.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '400':
+          description: Dados de entrada inválidos.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Credenciais inválidas.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /auth/me:
+    get:
+      tags:
+        - Auth
+      summary: Obtém o perfil do usuário autenticado.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Perfil do usuário autenticado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthenticatedUser'
+        '401':
+          description: Não autenticado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /users/{userIdOrHandle}:
+    get:
+      tags:
+        - Users
+      summary: Obtém o perfil público de um usuário por ID ou handle.
+      security: [] # Public endpoint
+      parameters:
+        - name: userIdOrHandle
+          in: path
+          required: true
+          description: ID (UUID) ou handle do usuário.
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Perfil público do usuário.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserPublicProfile'
+        '404':
+          description: Usuário não encontrado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /users/me:
+    put:
+      tags:
+        - Users
+      summary: Atualiza o perfil do usuário autenticado.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateUserProfileRequest'
+      responses:
+        '200':
+          description: Perfil atualizado com sucesso.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthenticatedUser' # Returns the full updated user profile
+        '400':
+          description: Dados de entrada inválidos.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Não autenticado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /posts:
+    post:
+      tags:
+        - Posts
+      summary: Cria um novo post.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreatePostRequest'
+      responses:
+        '201':
+          description: Post criado com sucesso.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Post'
+        '400':
+          description: Dados de entrada inválidos.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Não autenticado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /posts/feed:
+    get:
+      tags:
+        - Posts
+      summary: Obtém o feed de posts do usuário autenticado.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          description: Número da página para paginação.
+          required: false
+          schema:
+            type: integer
+            format: int32
+            default: 1
+        - name: limit
+          in: query
+          description: Número de posts por página.
+          required: false
+          schema:
+            type: integer
+            format: int32
+            default: 10
+      responses:
+        '200':
+          description: Lista de posts do feed.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Post'
+        '401':
+          description: Não autenticado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /posts/{postId}:
+    get:
+      tags:
+        - Posts
+      summary: Obtém os detalhes de um post específico.
+      security: [] # Public, privacy handled by service
+      parameters:
+        - name: postId
+          in: path
+          required: true
+          description: ID do post.
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Detalhes do post.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Post'
+        '404':
+          description: Post não encontrado ou não acessível.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /posts/{postId}/like:
+    post:
+      tags:
+        - Posts
+      summary: Curte um post.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: postId
+          in: path
+          required: true
+          description: ID do post a ser curtido.
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200': # Or 201 if creating a new "like" resource, 200 if updating like count
+          description: Post curtido com sucesso. Retorna nova contagem e status de curtida.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LikeResponse'
+        '401':
+          description: Não autenticado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Post não encontrado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    delete:
+      tags:
+        - Posts
+      summary: Remove a curtida de um post.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: postId
+          in: path
+          required: true
+          description: ID do post a ser descurtido.
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Curtida removida com sucesso. Retorna nova contagem e status de curtida.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LikeResponse'
+        '401':
+          description: Não autenticado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Post não encontrado ou não curtido anteriormente.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /posts/{postId}/comments:
+    post:
+      tags:
+        - Posts
+        - Comments
+      summary: Adiciona um comentário a um post.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: postId
+          in: path
+          required: true
+          description: ID do post a ser comentado.
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCommentRequest'
+      responses:
+        '201':
+          description: Comentário criado com sucesso.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Comment'
+        '400':
+          description: Dados de entrada inválidos.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Não autenticado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Post não encontrado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    get:
+      tags:
+        - Posts
+        - Comments
+      summary: Lista os comentários de um post.
+      security: [] # Public, post privacy might affect comment visibility implicitly
+      parameters:
+        - name: postId
+          in: path
+          required: true
+          description: ID do post para listar comentários.
+          schema:
+            type: string
+            format: uuid
+        - name: page
+          in: query
+          description: Número da página para paginação.
+          required: false
+          schema:
+            type: integer
+            format: int32
+            default: 1
+        - name: limit
+          in: query
+          description: Número de comentários por página.
+          required: false
+          schema:
+            type: integer
+            format: int32
+            default: 10
+      responses:
+        '200':
+          description: Lista de comentários.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Comment'
+        '404':
+          description: Post não encontrado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+# TODO: Adicionar outros endpoints (Settings, Friends, Groups, Events, Marketplace, Notifications REST, etc.)
+# seguindo o mesmo padrão.
+# Para Notifications REST API (exemplo):
+# /notifications:
+#   get:
+#     tags: [Notifications]
+#     summary: Lista notificações do usuário autenticado.
+#     security:
+#       - bearerAuth: []
+#     parameters:
+#       - name: page
+#         in: query
+#         schema: { type: integer, default: 1 }
+#       - name: limit
+#         in: query
+#         schema: { type: integer, default: 10 }
+#       - name: include_read
+#         in: query
+#         schema: { type: boolean, default: false }
+#     responses:
+#       '200':
+#         description: Lista de notificações.
+#         content:
+#           application/json:
+#             schema:
+#               type: array
+#               items: { $ref: '#/components/schemas/NotificationPayload' } # Usar o payload do WS ou um schema específico
+#   post: # Rota para marcar todas como lidas, ou uma específica
+#     tags: [Notifications]
+#     summary: Marca notificações como lidas.
+#     security:
+#       - bearerAuth: []
+#     requestBody:
+#       content:
+#         application/json:
+#           schema:
+#             type: object
+#             properties:
+#               notificationId: { type: string, format: uuid, description: "ID da notificação específica, ou omitir para marcar todas" }
+#               mark_all_as_read: { type: boolean, description: "Marcar todas como lidas"}
+#     responses:
+#       '204':
+#         description: Notificações marcadas como lidas.
+
+```

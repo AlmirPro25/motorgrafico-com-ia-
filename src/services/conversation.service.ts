@@ -36,7 +36,7 @@ export const getOrCreateOneOnOneConversation = async (
       currentUserId // Creator is the current user
     );
   }
-  
+
   if (conversation) {
     // Ensure participant details are populated for the response (especially for newly created)
     // findDirectConversationByParticipantIds and createConversation -> findConversationById should already do this.

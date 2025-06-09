@@ -27,7 +27,7 @@ export const updateCurrentUserSettingsHandler = async (req: AuthenticatedRequest
         if (!req.user?.userId) {
             return res.status(401).json({ error: 'User not authenticated.' });
         }
-        
+
         // Explicitly pick allowed fields to prevent unwanted updates
         const {
             is_private,
@@ -50,7 +50,7 @@ export const updateCurrentUserSettingsHandler = async (req: AuthenticatedRequest
         if (notifications_push_enabled !== undefined) settingsData.notifications_push_enabled = notifications_push_enabled;
         if (theme !== undefined) settingsData.theme = theme;
         if (language !== undefined) settingsData.language = language;
-        
+
         if (Object.keys(settingsData).length === 0) {
             return res.status(400).json({ error: 'No valid settings data provided for update.' });
         }

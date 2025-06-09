@@ -25,7 +25,7 @@ export const createGroupHandler = async (req: AuthenticatedRequest, res: Respons
         if (!req.user?.userId) return res.status(401).json({ error: 'User not authenticated.' });
         const dto: CreateGroupDTO = { ...req.body, creator_id: req.user.userId };
         if (!dto.name || !dto.type) return res.status(400).json({ error: 'Name and type are required.' });
-        
+
         const group = await GroupService.createNewGroup(dto);
         res.status(201).json(group);
     } catch (error) {
@@ -72,7 +72,7 @@ export const updateGroupHandler = async (req: AuthenticatedRequest, res: Respons
         if (!req.user?.userId) return res.status(401).json({ error: 'User not authenticated.' });
         const dto: UpdateGroupDTO = req.body;
         if (Object.keys(dto).length === 0) return res.status(400).json({ error: 'No update data provided.'});
-        
+
         const group = await GroupService.updateExistingGroup(req.params.groupId, req.user.userId, dto);
         res.status(200).json(group);
     } catch (error) {

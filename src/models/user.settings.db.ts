@@ -12,18 +12,18 @@ export const findUserSettingsByUserId = async (userId: string): Promise<UserSett
         // Map row to UserSettings, ensuring correct type conversion and defaults for new fields
         const settings: UserSettings = {
             user_id: row.user_id,
-            is_private: row.is_private === true, 
-            notifications_on: row.notifications_on === true, 
-            
+            is_private: row.is_private === true,
+            notifications_on: row.notifications_on === true,
+
             privacy_future_posts: row.privacy_future_posts || 'public' as PostPrivacySetting,
             privacy_friend_requests: row.privacy_friend_requests || 'everyone',
             privacy_show_friend_list: row.privacy_show_friend_list || 'everyone',
-            
+
             notifications_push_enabled: row.notifications_push_enabled === true,
-            
+
             theme: row.theme || 'system' as UserTheme,
             language: row.language || 'en-US',
-            
+
             created_at: new Date(row.created_at),
             updated_at: new Date(row.updated_at),
         };
@@ -40,11 +40,11 @@ export const createDefaultUserSettings = async (userId: string): Promise<UserSet
   // Default values for privacy settings are also set here or in DB schema.
   const sql = `
     INSERT INTO "UserSettings" (
-        user_id, is_private, notifications_on, 
+        user_id, is_private, notifications_on,
         privacy_future_posts, privacy_friend_requests, privacy_show_friend_list,
         notifications_push_enabled, theme, language
     )
-    VALUES ($1, false, true, 'public', 'everyone', 'everyone', true, 'system', 'en-US') 
+    VALUES ($1, false, true, 'public', 'everyone', 'everyone', true, 'system', 'en-US')
     RETURNING *;
   `;
   try {
@@ -101,7 +101,7 @@ export const updateUserSettings = async (userId: string, settingsData: Partial<U
             return null;
         }
         // Use findUserSettingsByUserId to ensure consistent mapping and defaults for any potentially missing fields from RETURNING *
-        return findUserSettingsByUserId(rows[0].user_id); 
+        return findUserSettingsByUserId(rows[0].user_id);
     } catch (error) {
         console.error(`Error updating user settings for user ${userId}:`, error);
         throw error;

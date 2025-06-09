@@ -32,7 +32,7 @@ export const createStory = async (storyData: CreateStoryDTO): Promise<Story> => 
   const { user_id, content_image_url, content_video_url, content_text, background_color, font_style } = storyData;
   // expires_at is set to 24 hours from now using PostgreSQL interval
   const sql = `
-    INSERT INTO "Stories" 
+    INSERT INTO "Stories"
       (user_id, content_image_url, content_video_url, content_text, background_color, font_style, expires_at)
     VALUES ($1, $2, $3, $4, $5, $6, NOW() + INTERVAL '24 hours')
     RETURNING id;
@@ -62,7 +62,7 @@ export const findStoryById = async (storyId: string, currentUserId?: string): Pr
       ${currentUserId ? ', (SELECT EXISTS (SELECT 1 FROM "StoryViews" sv_user WHERE sv_user.story_id = s.id AND sv_user.user_id = $2)) AS is_viewed_by_user' : ''}
     FROM "Stories" s
     JOIN "Users" u ON s.user_id = u.id
-    WHERE s.id = $1 AND s.expires_at > NOW(); 
+    WHERE s.id = $1 AND s.expires_at > NOW();
   `;
   // Only fetch non-expired stories by ID as well generally
   try {
@@ -125,7 +125,7 @@ export const getFeedStories = async (
       (SELECT COUNT(DISTINCT sv.user_id) FROM "StoryViews" sv WHERE sv.story_id = s.id) AS view_count,
       (SELECT EXISTS (SELECT 1 FROM "StoryViews" sv_user WHERE sv_user.story_id = s.id AND sv_user.user_id = $1)) AS is_viewed_by_user
     FROM (
-      SELECT 
+      SELECT
         s_inner.*,
         ROW_NUMBER() OVER (PARTITION BY s_inner.user_id ORDER BY s_inner.created_at DESC) as rn
       FROM "Stories" s_inner

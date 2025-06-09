@@ -66,13 +66,22 @@ app.use((err: any, req: Request, res: Response, next: NextFunction) => {
 
 // Import database test connection function
 import { testConnection } from './config/db';
+import { createServer } from 'http'; // Import createServer
+import { setupSocketIO } from './socket/socket.setup'; // Import Socket.IO setup
 
-app.listen(PORT, async () => {
+const httpServer = createServer(app); // Create HTTP server from Express app
+
+// Initialize Socket.IO
+const io = setupSocketIO(httpServer);
+
+httpServer.listen(PORT, async () => { // Listen on the http server, not app
   console.log(`Server is running on port ${PORT}`);
+  console.log(`WebSocket server is running and listening on same port.`);
   // Test database connection on startup
   if (process.env.NODE_ENV !== 'test') { // Avoid running during automated tests if DB is not set up
     await testConnection();
   }
 });
 
-export default app;
+// Export app and io for potential testing or other uses, though typically app is main export
+export { app, io, httpServer };

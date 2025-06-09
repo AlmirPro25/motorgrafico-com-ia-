@@ -158,7 +158,7 @@ export const findAllMarketplaceItems = async (
           case 'date_oldest': orderByClause = 'ORDER BY mi.listed_at ASC'; break;
       }
   }
-  
+
   const whereString = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
   queryParams.push(limit, offset);
 
@@ -247,7 +247,7 @@ export const findAllMarketplaceCategories = async (parentCategoryId?: string): P
   } else { // Fetch all categories if parentCategoryId is explicitly set to empty string or not provided in a way that implies filtering
       sql += ' ORDER BY name ASC;';
   }
-  
+
   try {
     const { rows } = await query(sql, params);
     return rows.map(mapRowToMarketplaceCategory);

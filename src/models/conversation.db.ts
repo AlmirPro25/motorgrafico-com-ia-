@@ -41,10 +41,10 @@ const mapRowToConversation = async (row: any, currentUserId: string): Promise<Co
             } as PublicUserProfile
         } as Message;
     }
-    
+
     // Populate unread_count (assumes unread_messages_count is joined and calculated for currentUserId)
     conversation.unread_count = row.unread_messages_count ? parseInt(row.unread_messages_count, 10) : 0;
-    
+
     // Populate participants (assumes they are fetched separately or joined in a more complex query)
     // For simplicity, this mapping assumes participant details might be fetched in service or a more complex query
     // If participants are joined as an array of JSON objects:
@@ -82,7 +82,7 @@ export const createConversation = async (
       addParticipantToConversation(conversationId, userId)
     );
     await Promise.all(participantPromises);
-    
+
     // For one-on-one, mark creator's last_read_at initially to now to avoid unread for self.
     if (creatorUserId && type === 'one_on_one') {
         await updateParticipantLastReadAt(conversationId, creatorUserId);
@@ -170,7 +170,7 @@ export const findConversationById = async (conversationId: string, currentUserId
         if (!participantIds.includes(currentUserId)) {
             // User is not a participant, should not be able to fetch this conversation
             // This check is important for security.
-            return null; 
+            return null;
         }
     }
     return mapRowToConversation(rows[0], currentUserId || ''); // Pass empty if no currentUserId, mapRow will handle
@@ -206,8 +206,8 @@ export const findConversationsByUserId = async (
       (
         SELECT COUNT(m.id)
         FROM "Messages" m
-        WHERE m.conversation_id = c.id 
-          AND m.sender_id != $1 
+        WHERE m.conversation_id = c.id
+          AND m.sender_id != $1
           AND (m.created_at > cp.last_read_at OR cp.last_read_at IS NULL)
       ) AS unread_messages_count,
       (

@@ -41,7 +41,8 @@ const mapRowToPublicUserProfile = (row: any): PublicUserProfile => {
         first_name: row.first_name,
         last_name: row.last_name,
         profile_picture_url: row.profile_picture_url,
-        // created_at is not part of PublicUserProfile by default but could be added
+        is_online: row.is_online === true,
+        last_seen_at: row.last_seen_at ? new Date(row.last_seen_at) : undefined,
     };
 };
 
@@ -94,7 +95,7 @@ export const findFriendRequestBetweenUsers = async (userId1: string, userId2: st
 export const findPendingFriendRequest = async (userId1: string, userId2: string): Promise<FriendRequest | null> => {
   const sql = `
     SELECT * FROM "FriendRequests"
-    WHERE status = 'pending' AND 
+    WHERE status = 'pending' AND
           ((requester_id = $1 AND receiver_id = $2) OR (requester_id = $2 AND receiver_id = $1));
   `;
   try {
@@ -203,8 +204,9 @@ export const getUserFriends = async (
       u.handle,
       u.first_name,
       u.last_name,
-      u.profile_picture_url
-      -- u.created_at -- if needed in PublicUserProfile
+      u.profile_picture_url,
+      u.is_online,
+      u.last_seen_at
     FROM "FriendRequests" fr
     JOIN "Users" u ON u.id = (CASE WHEN fr.requester_id = $1 THEN fr.receiver_id ELSE fr.requester_id END)
     WHERE (fr.requester_id = $1 OR fr.receiver_id = $1) AND fr.status = 'accepted'
@@ -223,14 +225,14 @@ export const getUserFriends = async (
 // Basic suggestion: users not self, not already friends, not pending request with them.
 export const getFriendSuggestions = async (userId: string, limit: number = 10): Promise<PublicUserProfile[]> => {
   const sql = `
-    SELECT u.id AS friend_id, u.handle, u.first_name, u.last_name, u.profile_picture_url
+    SELECT u.id AS friend_id, u.handle, u.first_name, u.last_name, u.profile_picture_url, u.is_online, u.last_seen_at
     FROM "Users" u
     WHERE u.id != $1  -- Not self
     AND NOT EXISTS (  -- Not already friends or pending request with them
       SELECT 1 FROM "FriendRequests" fr
       WHERE ( (fr.requester_id = $1 AND fr.receiver_id = u.id) OR
               (fr.requester_id = u.id AND fr.receiver_id = $1) )
-            AND fr.status IN ('pending', 'accepted') 
+            AND fr.status IN ('pending', 'accepted')
     )
     -- Add more complex suggestion logic here, e.g., friends of friends, common interests etc.
     ORDER BY RANDOM() -- Very basic suggestion, not for production at scale

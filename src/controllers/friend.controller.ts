@@ -23,7 +23,7 @@ export const sendFriendRequestHandler = async (req: AuthenticatedRequest, res: R
         res.status(201).json(request);
     } catch (error) {
         if (error instanceof Error) {
-            if (error.message.includes('oneself') || error.message.includes('not found') || 
+            if (error.message.includes('oneself') || error.message.includes('not found') ||
                 error.message.includes('already pending') || error.message.includes('already friends') ||
                 error.message.includes('not accepting friend requests')) {
                 return res.status(400).json({ error: error.message });

@@ -31,7 +31,8 @@ const mapRowToPost = async (row: any, currentUserId?: string): Promise<Post> => 
       first_name: row.author_first_name,
       last_name: row.author_last_name,
       profile_picture_url: row.author_profile_picture_url,
-      // created_at for author is not typically included here unless specifically needed
+      is_online: row.author_is_online === true,
+      last_seen_at: row.author_last_seen_at ? new Date(row.author_last_seen_at) : undefined,
     } as PublicUserProfile,
     like_count: parseInt(row.like_count, 10) || 0,
     comment_count: parseInt(row.comment_count, 10) || 0,
@@ -91,6 +92,8 @@ export const findPostById = async (postId: string, currentUserId?: string): Prom
       u.first_name AS author_first_name,
       u.last_name AS author_last_name,
       u.profile_picture_url AS author_profile_picture_url,
+      u.is_online AS author_is_online,
+      u.last_seen_at AS author_last_seen_at,
       (SELECT COUNT(*) FROM "Likes" l WHERE l.post_id = p.id) AS like_count,
       (SELECT COUNT(*) FROM "Comments" c WHERE c.post_id = p.id) AS comment_count
       ${currentUserId ? ', (SELECT EXISTS (SELECT 1 FROM "Likes" l_user WHERE l_user.post_id = p.id AND l_user.user_id = $2)) AS is_liked_by_user' : ''}
@@ -139,6 +142,8 @@ export const findPostsByUserId = async (
       u.first_name AS author_first_name,
       u.last_name AS author_last_name,
       u.profile_picture_url AS author_profile_picture_url,
+      u.is_online AS author_is_online,
+      u.last_seen_at AS author_last_seen_at,
       (SELECT COUNT(*) FROM "Likes" l WHERE l.post_id = p.id) AS like_count,
       (SELECT COUNT(*) FROM "Comments" c WHERE c.post_id = p.id) AS comment_count
       ${currentUserId ? ', (SELECT EXISTS (SELECT 1 FROM "Likes" l_user WHERE l_user.post_id = p.id AND l_user.user_id = $3)) AS is_liked_by_user' : ''}
@@ -179,6 +184,8 @@ export const getFeedPosts = async (
       u.first_name AS author_first_name,
       u.last_name AS author_last_name,
       u.profile_picture_url AS author_profile_picture_url,
+      u.is_online AS author_is_online,
+      u.last_seen_at AS author_last_seen_at,
       (SELECT COUNT(*) FROM "Likes" l WHERE l.post_id = p.id) AS like_count,
       (SELECT COUNT(*) FROM "Comments" c WHERE c.post_id = p.id) AS comment_count,
       (SELECT EXISTS (SELECT 1 FROM "Likes" l_user WHERE l_user.post_id = p.id AND l_user.user_id = $1)) AS is_liked_by_user
@@ -339,6 +346,8 @@ export const findPostsByGroupId = async (
       u.first_name AS author_first_name,
       u.last_name AS author_last_name,
       u.profile_picture_url AS author_profile_picture_url,
+      u.is_online AS author_is_online,
+      u.last_seen_at AS author_last_seen_at,
       (SELECT COUNT(*) FROM "Likes" l WHERE l.post_id = p.id) AS like_count,
       (SELECT COUNT(*) FROM "Comments" c WHERE c.post_id = p.id) AS comment_count
       ${currentUserId ? ', (SELECT EXISTS (SELECT 1 FROM "Likes" l_user WHERE l_user.post_id = p.id AND l_user.user_id = $3)) AS is_liked_by_user' : ''}
@@ -365,6 +374,8 @@ export const findPostsByGroupId = async (
         u.first_name AS author_first_name,
         u.last_name AS author_last_name,
         u.profile_picture_url AS author_profile_picture_url,
+      u.is_online AS author_is_online,
+      u.last_seen_at AS author_last_seen_at,
         (SELECT COUNT(*) FROM "Likes" l WHERE l.post_id = p.id) AS like_count,
         (SELECT COUNT(*) FROM "Comments" c WHERE c.post_id = p.id) AS comment_count
         ${currentUserId ? ', (SELECT EXISTS (SELECT 1 FROM "Likes" l_user WHERE l_user.post_id = p.id AND l_user.user_id = $3)) AS is_liked_by_user' : ''}

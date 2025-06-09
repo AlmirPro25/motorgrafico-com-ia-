@@ -1,8 +1,10 @@
 import * as LikeDB from '../models/like.db';
 import * as PostService from './post.service'; // To check post existence and privacy
 import * as UserDB from '../models/user.db';   // To check user existence
+import * as NotificationService from './notification.service'; // Import NotificationService
 import { Like } from '../models/like.types';
 import { Post } from '../models/post.types'; // For getting post details
+import { CreateNotificationDTO } from '../models/notification.types'; // For DTO
 
 export const likePost = async (postId: string, userId: string): Promise<Like | null> => {
   // 1. Validate user exists
@@ -25,12 +27,31 @@ export const likePost = async (postId: string, userId: string): Promise<Like | n
   // The DB function `createLike` has ON CONFLICT DO NOTHING, so it's safe to call.
   // It returns the new like, or fetches existing if it was already liked.
   const like = await LikeDB.createLike(postId, userId);
-  
+
   if (!like) {
     // This might happen if createLike fails for reasons other than conflict (e.g. DB error not caught by findLike fallback)
     // Or if findLike fallback in createLike also fails.
     throw new Error('Failed to create or find like.');
   }
+
+  // Send notification to post owner if someone else liked their post
+  if (post && post.user_id !== userId) { // Ensure post data is available and liker is not post owner
+    const likerProfile = await UserDB.findUserById(userId); // Get liker's profile for the notification message
+    if (likerProfile) {
+        const notificationDTO: CreateNotificationDTO = {
+            recipient_user_id: post.user_id,
+            actor_user_id: userId,
+            type: 'new_like',
+            target_entity_type: 'post',
+            target_entity_id: postId,
+            message: `${likerProfile.first_name || likerProfile.handle} liked your post.`,
+        };
+        // Fire and forget notification, no need to await for likePost response
+        NotificationService.createNotificationAndEmit(notificationDTO)
+            .catch(err => console.error("Failed to send 'new_like' notification:", err));
+    }
+  }
+
   return like;
 };
 
